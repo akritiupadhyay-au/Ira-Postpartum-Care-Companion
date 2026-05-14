@@ -139,19 +139,25 @@ class GemmaClient:
         messages.append({
             "role": "user",
             "content": [
-                {"type": "image"},
+                {"type": "image", "image": image},
                 {"type": "text", "text": prompt}
             ]
         })
 
+        full_prompt = processor.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+
         inputs = processor(
-            text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
+            text=full_prompt,
             images=image,
             return_tensors="pt"
         ).to(model.device)
 
         with torch.no_grad():
-            output = model.generate(**inputs, max_new_tokens=max_new_tokens)
+            output = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
 
         input_len = inputs["input_ids"].shape[1]
         return processor.decode(output[0][input_len:], skip_special_tokens=True)
