@@ -1,1 +1,10 @@
-[Comprehensive Postpartum Dataset](/kaggle/input/datasets/akritiupadhyayks/comprehensive-postpartum-dataset/comprehensive_postpartum_dataset_v2.pdf)
+## Kaggle Datasets
+-[Comprehensive Postpartum Dataset](https://www.kaggle.com/datasets/akritiupadhyayks/comprehensive-postpartum-dataset?select=comprehensive_postpartum_dataset_v2.pdf)
+-[Impact of Maternal Mental Health on Infant Sleep](https://www.kaggle.com/datasets/thedevastator/impact-of-maternal-mental-health-on-infant-sleep?select=Dataset_maternal_mental_health_infant_sleep.csv)
+-[Maternal Health Features Dataset](https://www.kaggle.com/datasets/ziya07/maternal-health-features-dataset?select=birth_weight_dataset.csv)
+-[Maternal Health Risk Data set](https://www.kaggle.com/datasets/drmbsharma/maternal-health-risk-data-set?select=Maternal_Risk.csv)
+-[Maternal Mental Health and Infant Sleep](https://www.kaggle.com/datasets/thedevastator/maternal-mental-health-and-infant-sleep?select=Dataset_maternal_mental_health_infant_sleep.csv)
+-[Maternal risk prediction](https://www.kaggle.com/datasets/mohamedmansourabbas/maternal-risk-prediction?select=Maternal+Health+Risk+Data+Set+%28project+7%29.csv)
+-[PostPartum Depression](https://www.kaggle.com/datasets/parvezalmuqtadir2348/postpartum-depression?select=post+natal+data.csv)
+-[Early Prediction of GDM Excel data](https://www.kaggle.com/datasets/prashanthana/early-prediction-of-gdm?select=GDM_Variable_Descriptions.xlsx)
+-[Early Prediction of GDM CSV data](https://www.kaggle.com/datasets/prashanthana/early-prediction-of-gdm?select=gdm_synthetic_data.csv)
