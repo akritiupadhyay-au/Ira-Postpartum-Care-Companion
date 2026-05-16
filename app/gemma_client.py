@@ -172,11 +172,19 @@ class GemmaClient:
             ]
         })
 
-        # Process input with image - processor handles PIL image automatically
+        # Apply chat template first
+        text_prompt = processor.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+
+        # Process input with image - pass PIL image to processor
         inputs = processor(
-            text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
-            images=image,
-            return_tensors="pt"
+            text=text_prompt,
+            images=[image],  # Processor expects list of images
+            return_tensors="pt",
+            padding=True
         ).to(model.device)
 
         input_len = inputs["input_ids"].shape[-1]
@@ -228,11 +236,19 @@ class GemmaClient:
             ]
         })
 
-        # Process input with image
+        # Apply chat template first
+        text_prompt = processor.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+
+        # Process input with image - pass PIL image to processor
         inputs = processor(
-            text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
-            images=image,
-            return_tensors="pt"
+            text=text_prompt,
+            images=[image],  # Processor expects list of images
+            return_tensors="pt",
+            padding=True
         ).to(model.device)
 
         input_len = inputs["input_ids"].shape[-1]
@@ -308,11 +324,19 @@ class GemmaClient:
                 ]
             })
 
+            # Apply chat template first
+            text_prompt = processor.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+
             # Process input - processor extracts frames from video file
             inputs = processor(
-                text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
-                videos=video_path,
-                return_tensors="pt"
+                text=text_prompt,
+                videos=[video_path],  # Processor expects list of video paths
+                return_tensors="pt",
+                padding=True
             ).to(model.device)
 
             input_len = inputs["input_ids"].shape[-1]
@@ -376,11 +400,19 @@ class GemmaClient:
                 ]
             })
 
+            # Apply chat template first
+            text_prompt = processor.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+
             # Process input - processor reads audio from file
             inputs = processor(
-                text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
-                audios=audio_path,
-                return_tensors="pt"
+                text=text_prompt,
+                audios=[audio_path],  # Processor expects list of audio paths
+                return_tensors="pt",
+                padding=True
             ).to(model.device)
 
             input_len = inputs["input_ids"].shape[-1]
