@@ -243,6 +243,7 @@ st.sidebar.title("Navigation")
 nav_options = [
     ("Wellness Check", t("nav_wellness", lang)),
     ("📸 Visual Health Check", t("nav_visual", lang)),
+    ("🎥 Video Health Check", t("nav_video", lang)),
     ("Nutrition", t("nav_nutrition", lang)),
     ("Track Your Health", t("nav_tracker", lang)),
     ("Share with Ira", t("nav_chat", lang)),
@@ -286,6 +287,10 @@ st.sidebar.caption("⚕️ This app does not replace medical advice. Always cons
 if page == "📸 Visual Health Check":
     from app.streamlit_image_check import render_image_check_page
     render_image_check_page(gemma_client, st.session_state.user_profile)
+
+elif page == "🎥 Video Health Check":
+    from app.streamlit_video_check import render_video_check_page
+    render_video_check_page(gemma_client, st.session_state.user_profile)
 
 elif page == "Wellness Check":
     lang = st.session_state.language
