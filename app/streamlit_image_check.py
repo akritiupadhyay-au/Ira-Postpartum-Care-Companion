@@ -4,6 +4,7 @@ import streamlit as st
 from streamlit_mic_recorder import mic_recorder
 from pathlib import Path
 from PIL import Image
+from io import BytesIO
 import tempfile
 
 
@@ -103,10 +104,9 @@ def render_image_check_page(gemma_client, user_profile):
         # Analyze button
         if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
             # Save temp file - convert to RGB first to ensure compatibility
-            temp_path = Path("/tmp/uploaded_image.jpg")
             if image.mode != 'RGB':
                 image = image.convert('RGB')
-            image.save(temp_path, quality=95)
+                pil_image = image
 
             # Build prompt based on check type
             prompts = {
@@ -128,7 +128,7 @@ def render_image_check_page(gemma_client, user_profile):
                     if show_thinking:
                         # Use image analysis WITH thinking mode
                         result = gemma_client.generate_with_image_thinking(
-                            image_path=str(temp_path),
+                            image_path=pil_image,
                             prompt=prompt,
                             system_prompt="You are a compassionate postpartum health AI assistant with medical knowledge.",
                             max_new_tokens=1024
@@ -145,7 +145,7 @@ def render_image_check_page(gemma_client, user_profile):
                     else:
                         # Use image analysis without thinking
                         response = gemma_client.generate_with_image(
-                            image_path=str(temp_path),
+                            image_path=pil_image,
                             prompt=prompt,
                             system_prompt="You are Ira, a compassionate postpartum health AI assistant.",
                             max_new_tokens=512,
@@ -164,6 +164,7 @@ def render_image_check_page(gemma_client, user_profile):
 
                     # Option to share with doctor
                     st.markdown("---")
+                    final_answer = result['answer'] if show_thinking else response
                     if st.button("📤 Export Assessment"):
                         # Generate export text
                         export_text = f"""
