@@ -5,6 +5,7 @@ TRANSLATIONS = {
         # Navigation
         "nav_wellness": "Wellness Check",
         "nav_visual": "📸 Visual Health Check",
+        "nav_video": "🎥 Video Health Check",
         "nav_nutrition": "Nutrition",
         "nav_tracker": "Track Your Health",
         "nav_chat": "Share with Ira",
@@ -200,6 +201,7 @@ TRANSLATIONS = {
         # Navigation
         "nav_wellness": "स्वास्थ्य जांच",
         "nav_visual": "📸 दृश्य स्वास्थ्य जांच",
+        "nav_video": "🎥 वीडियो स्वास्थ्य जांच",
         "nav_nutrition": "पोषण",
         "nav_tracker": "अपना स्वास्थ्य ट्रैक करें",
         "nav_chat": "इरा से बात करें",
@@ -400,6 +402,7 @@ TRANSLATIONS = {
         # Navigation
         "nav_wellness": "நல்வாழ்வு சோதனை",
         "nav_visual": "📸 காட்சி சுகாதார சோதனை",
+        "nav_video": "🎥 வீடியோ சுகாதார சோதனை",
         "nav_nutrition": "ஊட்டச்சத்து",
         "nav_tracker": "உங்கள் சுகாதாரத்தை கண்காணிக்கவும்",
         "nav_chat": "இராவுடன் பகிரவும்",
@@ -480,6 +483,7 @@ TRANSLATIONS = {
         # Navigation
         "nav_wellness": "ఆరోగ్య తనిఖీ",
         "nav_visual": "📸 దృశ్య ఆరోగ్య తనిఖీ",
+        "nav_video": "🎥 వీడియో ఆరోగ్య తనిఖీ",
         "nav_nutrition": "పోషకాహారం",
         "nav_tracker": "మీ ఆరోగ్యాన్ని ట్రాక్ చేయండి",
         "nav_chat": "ఇరాతో భాగస్వామ్యం చేయండి",
@@ -558,6 +562,7 @@ TRANSLATIONS = {
         # Navigation
         "nav_wellness": "সুস্থতা পরীক্ষা",
         "nav_visual": "📸 ভিজ্যুয়াল স্বাস্থ্য পরীক্ষা",
+        "nav_video": "🎥 ভিডিও স্বাস্থ্য পরীক্ষা",
         "nav_nutrition": "পুষ্টি",
         "nav_tracker": "আপনার স্বাস্থ্য ট্র্যাক করুন",
         "nav_chat": "ইরার সাথে শেয়ার করুন",
@@ -630,6 +635,7 @@ TRANSLATIONS = {
         # Navigation
         "nav_wellness": "आरोग्य तपासणी",
         "nav_visual": "📸 व्हिज्युअल आरोग्य तपासणी",
+        "nav_video": "🎥 व्हिडिओ आरोग्य तपासणी",
         "nav_nutrition": "पोषण",
         "nav_tracker": "तुमचे आरोग्य ट्रॅक करा",
         "nav_chat": "इरासोबत शेअर करा",
@@ -704,6 +710,7 @@ TRANSLATIONS = {
         # Navigation
         "nav_wellness": "આરોગ્ય તપાસ",
         "nav_visual": "📸 વિઝ્યુઅલ આરોગ્ય તપાસ",
+        "nav_video": "🎥 વીડિયો આરોગ્ય તપાસ",
         "nav_nutrition": "પોષણ",
         "nav_tracker": "તમારું આરોગ્ય ટ્રૅક કરો",
         "nav_chat": "ઇરા સાથે શેર કરો",
@@ -777,6 +784,7 @@ TRANSLATIONS = {
     "Kannada": {
         "nav_wellness": "ಆರೋಗ್ಯ ಪರೀಕ್ಷೆ",
         "nav_visual": "📸 ದೃಶ್ಯ ಆರೋಗ್ಯ ಪರೀಕ್ಷೆ",
+        "nav_video": "🎥 ವೀಡಿಯೊ ಆರೋಗ್ಯ ಪರೀಕ್ಷೆ",
         "nav_nutrition": "ಪೋಷಣೆ",
         "nav_tracker": "ನಿಮ್ಮ ಆರೋಗ್ಯವನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಿ",
         "nav_chat": "ಇರಾ ಜೊತೆ ಹಂಚಿಕೊಳ್ಳಿ",
@@ -833,6 +841,7 @@ TRANSLATIONS = {
     "Malayalam": {
         "nav_wellness": "ആരോഗ്യ പരിശോധന",
         "nav_visual": "📸 ദൃശ്യ ആരോഗ്യ പരിശോധന",
+        "nav_video": "🎥 വീഡിയോ ആരോഗ്യ പരിശോധന",
         "nav_nutrition": "പോഷകാഹാരം",
         "nav_tracker": "നിങ്ങളുടെ ആരോഗ്യം ട്രാക്ക് ചെയ്യുക",
         "nav_chat": "ഇറയുമായി പങ്കിടുക",
@@ -889,6 +898,7 @@ TRANSLATIONS = {
     "Punjabi": {
         "nav_wellness": "ਸਿਹਤ ਜਾਂਚ",
         "nav_visual": "📸 ਵਿਜ਼ੂਅਲ ਸਿਹਤ ਜਾਂਚ",
+        "nav_video": "🎥 ਵੀਡੀਓ ਸਿਹਤ ਜਾਂਚ",
         "nav_nutrition": "ਪੋਸ਼ਣ",
         "nav_tracker": "ਆਪਣੀ ਸਿਹਤ ਟਰੈਕ ਕਰੋ",
         "nav_chat": "ਇਰਾ ਨਾਲ ਸਾਂਝਾ ਕਰੋ",
@@ -945,6 +955,7 @@ TRANSLATIONS = {
     "Urdu": {
         "nav_wellness": "صحت کی جانچ",
         "nav_visual": "📸 بصری صحت کی جانچ",
+        "nav_video": "🎥 ویڈیو صحت کی جانچ",
         "nav_nutrition": "غذائیت",
         "nav_tracker": "اپنی صحت کو ٹریک کریں",
         "nav_chat": "ایرا کے ساتھ شیئر کریں",
@@ -1001,6 +1012,7 @@ TRANSLATIONS = {
     "Odia": {
         "nav_wellness": "ସ୍ୱାସ୍ଥ୍ୟ ଯାଞ୍ଚ",
         "nav_visual": "📸 ଭିଜୁଆଲ୍ ସ୍ୱାସ୍ଥ୍ୟ ଯାଞ୍ଚ",
+        "nav_video": "🎥 ଭିଡିଓ ସ୍ୱାସ୍ଥ୍ୟ ଯାଞ୍ଚ",
         "nav_nutrition": "ପୋଷଣ",
         "nav_tracker": "ଆପଣଙ୍କ ସ୍ୱାସ୍ଥ୍ୟ ଟ୍ରାକ୍ କରନ୍ତୁ",
         "nav_chat": "ଇରା ସହିତ ଶେୟାର୍ କରନ୍ତୁ",
@@ -1057,6 +1069,7 @@ TRANSLATIONS = {
     "Nepali": {
         "nav_wellness": "स्वास्थ्य जाँच",
         "nav_visual": "📸 दृश्य स्वास्थ्य जाँच",
+        "nav_video": "🎥 भिडियो स्वास्थ्य जाँच",
         "nav_nutrition": "पोषण",
         "nav_tracker": "आफ्नो स्वास्थ्य ट्र्याक गर्नुहोस्",
         "nav_chat": "इरासँग साझा गर्नुहोस्",
@@ -1113,6 +1126,7 @@ TRANSLATIONS = {
     "Assamese": {
         "nav_wellness": "স্বাস্থ্য পৰীক্ষা",
         "nav_visual": "📸 ভিজুৱেল স্বাস্থ্য পৰীক্ষা",
+        "nav_video": "🎥 ভিডিঅ' স্বাস্থ্য পৰীক্ষা",
         "nav_nutrition": "পুষ্টি",
         "nav_tracker": "আপোনাৰ স্বাস্থ্য ট্ৰেক কৰক",
         "nav_chat": "ইৰাৰ সৈতে শ্বেয়াৰ কৰক",
@@ -1169,6 +1183,7 @@ TRANSLATIONS = {
     "Hinglish": {
         "nav_wellness": "Wellness Check",
         "nav_visual": "📸 Visual Health Check",
+        "nav_video": "🎥 Video Health Check",
         "nav_nutrition": "Nutrition",
         "nav_tracker": "Apni Health Track Karein",
         "nav_chat": "Ira se Baat Karein",
