@@ -46,7 +46,7 @@ def render_image_check_page(gemma_client, user_profile):
             return
 
         # Display image
-        image = Image.open(uploaded_file)
+        image = Image.open(uploaded_file).convert('RGB')
         col1, col2 = st.columns([1, 1])
 
         with col1:
