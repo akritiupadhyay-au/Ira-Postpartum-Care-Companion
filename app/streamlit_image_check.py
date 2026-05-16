@@ -84,25 +84,30 @@ def render_image_check_page(gemma_client, user_profile):
             with st.spinner("Analyzing image..."):
                 try:
                     if show_thinking:
-                        result = gemma_client.generate_with_thinking(
+                        # Use image analysis WITH thinking mode
+                        result = gemma_client.generate_with_image_thinking(
+                            image_path=str(temp_path),
+                            prompt=prompt,
                             system_prompt="You are a compassionate postpartum health AI assistant with medical knowledge.",
-                            user_prompt=f"Image analysis request: {prompt}"
+                            max_new_tokens=1024
                         )
 
-                        st.markdown("### 🧠 AI Reasoning Process")
-                        with st.expander("How Ira analyzed this", expanded=False):
-                            st.write(result["thinking"])
+                        if result["thinking"]:
+                            st.markdown("### 🧠 AI Reasoning Process")
+                            with st.expander("How Ira analyzed this", expanded=False):
+                                st.info(result["thinking"])
 
                         st.markdown("### 📋 Assessment")
                         st.write(result["answer"])
 
                     else:
-                        # Use image analysis
+                        # Use image analysis without thinking
                         response = gemma_client.generate_with_image(
                             image_path=str(temp_path),
                             prompt=prompt,
                             system_prompt="You are Ira, a compassionate postpartum health AI assistant.",
-                            max_new_tokens=512
+                            max_new_tokens=512,
+                            enable_thinking=False
                         )
 
                         st.markdown("### 📋 Assessment")
