@@ -124,7 +124,7 @@ def render_image_check_page(gemma_client, user_profile):
                 try:
                     if show_thinking:
                         result = gemma_client.generate_with_image_thinking(
-                            image_path_or_pil=pil_image,   # ✅ PIL image directly
+                            image_path=pil_image,   # ✅ PIL image directly
                             prompt=prompt,
                             system_prompt="You are a compassionate postpartum health AI assistant with medical knowledge.",
                             max_new_tokens=1024
@@ -141,7 +141,7 @@ def render_image_check_page(gemma_client, user_profile):
 
                     else:
                         response = gemma_client.generate_with_image(
-                            image_path_or_pil=pil_image,   # ✅ PIL image directly
+                            image_path=pil_image,   # ✅ PIL image directly
                             prompt=prompt,
                             system_prompt="You are Ira, a compassionate postpartum health AI assistant.",
                             max_new_tokens=512,
