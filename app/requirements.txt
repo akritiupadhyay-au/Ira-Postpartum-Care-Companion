@@ -22,7 +22,8 @@ langchain-huggingface[full]
 langchain-core 
 langchain-classic 
 langchain-experimental 
-faiss-cpu pypdf
+faiss-cpu 
+pypdf
 streamlit-mic-recorder 
 pillow 
 torch
