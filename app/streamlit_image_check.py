@@ -45,12 +45,13 @@ def render_image_check_page(gemma_client, user_profile):
             st.error("❌ File too large. Maximum size: 10MB")
             return
 
-        # Display image
-        image = Image.open(uploaded_file).convert('RGB')
+        # ✅ Convert to RGB immediately on load — pil_image always defined here
+        pil_image = Image.open(uploaded_file).convert('RGB')
+
         col1, col2 = st.columns([1, 1])
 
         with col1:
-            st.image(image, caption="Uploaded image", use_container_width=True)
+            st.image(pil_image, caption="Uploaded image", use_container_width=True)
 
         with col2:
             # Additional context
@@ -81,7 +82,6 @@ def render_image_check_page(gemma_client, user_profile):
                 st.audio(audio_bytes_visual['bytes'], format='audio/wav')
 
                 with st.spinner("🎧 Transcribing description..."):
-                    # Transcribe audio
                     system_prompt = "You are a medical transcription assistant. Transcribe this audio description of a health concern accurately."
                     prompt = "Transcribe this audio. Provide only the transcription."
                     transcription_visual = gemma_client.generate_with_audio(
@@ -103,11 +103,8 @@ def render_image_check_page(gemma_client, user_profile):
 
         # Analyze button
         if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
-            # Save temp file - convert to RGB first to ensure compatibility
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-                pil_image = image
 
+            # ✅ pil_image is always available here — no conditional assignment
             # Build prompt based on check type
             prompts = {
                 "Skin condition / Rash": "Analyze this skin condition photo. Describe what you observe, possible causes in postpartum context, and recommend next steps.",
@@ -126,9 +123,8 @@ def render_image_check_page(gemma_client, user_profile):
             with st.spinner("Analyzing image..."):
                 try:
                     if show_thinking:
-                        # Use image analysis WITH thinking mode
                         result = gemma_client.generate_with_image_thinking(
-                            image_path=pil_image,
+                            image_path_or_pil=pil_image,   # ✅ PIL image directly
                             prompt=prompt,
                             system_prompt="You are a compassionate postpartum health AI assistant with medical knowledge.",
                             max_new_tokens=1024
@@ -141,11 +137,11 @@ def render_image_check_page(gemma_client, user_profile):
 
                         st.markdown("### 📋 Assessment")
                         st.write(result["answer"])
+                        final_answer = result["answer"]
 
                     else:
-                        # Use image analysis without thinking
                         response = gemma_client.generate_with_image(
-                            image_path=pil_image,
+                            image_path_or_pil=pil_image,   # ✅ PIL image directly
                             prompt=prompt,
                             system_prompt="You are Ira, a compassionate postpartum health AI assistant.",
                             max_new_tokens=512,
@@ -154,6 +150,7 @@ def render_image_check_page(gemma_client, user_profile):
 
                         st.markdown("### 📋 Assessment")
                         st.write(response)
+                        final_answer = response             # ✅ always defined
 
                     # Warning footer
                     st.warning(
@@ -162,13 +159,9 @@ def render_image_check_page(gemma_client, user_profile):
                         "If you notice concerning symptoms, seek medical attention immediately."
                     )
 
-                    # Option to share with doctor
+                    # Export
                     st.markdown("---")
-                    final_answer = result['answer'] if show_thinking else response
-                    if st.button("📤 Export Assessment"):
-                        # Generate export text
-                        export_text = f"""
-Visual Health Check Report
+                    export_text = f"""Visual Health Check Report
 Generated: {st.session_state.get('timestamp', 'Now')}
 
 Patient: {user_profile.get('name')}
@@ -178,17 +171,17 @@ Check Type: {check_type}
 Additional Info: {additional_info or 'None provided'}
 
 AI Assessment:
-{response if not show_thinking else result['answer']}
+{final_answer}
 
 ---
 Note: This is an AI-generated preliminary assessment. Professional medical evaluation is required.
 """
-                        st.download_button(
-                            "📥 Download Report",
-                            data=export_text,
-                            file_name=f"visual_check_{check_type.replace(' ', '_')}.txt",
-                            mime="text/plain"
-                        )
+                    st.download_button(
+                        "📥 Download Report",
+                        data=export_text,
+                        file_name=f"visual_check_{check_type.replace(' ', '_')}.txt",
+                        mime="text/plain"
+                    )
 
                 except Exception as e:
                     st.error(f"❌ Analysis failed: {str(e)}")
