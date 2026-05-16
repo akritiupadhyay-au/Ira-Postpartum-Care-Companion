@@ -40,28 +40,20 @@ def render_image_check_page(gemma_client, user_profile):
     )
 
     if uploaded_file:
-    # Validate size
+        # Validate size
         if uploaded_file.size > 10 * 1024 * 1024:
             st.error("❌ File too large. Maximum size: 10MB")
             return
-    
-        # ✅ Use getvalue() — reusable buffer, doesn't exhaust after st.image()
+
+        # ✅ No conversion here — gemma_client handles all image processing
+        # Just open raw for display purposes only
         image_bytes = uploaded_file.getvalue()
-        raw = Image.open(BytesIO(image_bytes))
-    
-        # ✅ Handle all image modes properly
-        if raw.mode == "RGBA":
-            background = Image.new("RGB", raw.size, (255, 255, 255))
-            background.paste(raw, mask=raw.split()[3])
-            pil_image = background
-        elif raw.mode == "P":
-            pil_image = raw.convert("RGBA").convert("RGB")
-        else:
-            pil_image = raw.convert("RGB")
+        display_image = Image.open(BytesIO(image_bytes))
+
         col1, col2 = st.columns([1, 1])
 
         with col1:
-            st.image(pil_image, caption="Uploaded image", use_container_width=True)
+            st.image(display_image, caption="Uploaded image", use_container_width=True)
 
         with col2:
             # Additional context
@@ -114,7 +106,6 @@ def render_image_check_page(gemma_client, user_profile):
         # Analyze button
         if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
 
-            # ✅ pil_image is always available here — no conditional assignment
             # Build prompt based on check type
             prompts = {
                 "Skin condition / Rash": "Analyze this skin condition photo. Describe what you observe, possible causes in postpartum context, and recommend next steps.",
@@ -133,8 +124,9 @@ def render_image_check_page(gemma_client, user_profile):
             with st.spinner("Analyzing image..."):
                 try:
                     if show_thinking:
+                        # ✅ Pass raw Image object — gemma_client handles all conversion
                         result = gemma_client.generate_with_image_thinking(
-                            image_path=pil_image,   # ✅ PIL image directly
+                            image_path_or_pil=display_image,
                             prompt=prompt,
                             system_prompt="You are a compassionate postpartum health AI assistant with medical knowledge.",
                             max_new_tokens=1024
@@ -150,8 +142,9 @@ def render_image_check_page(gemma_client, user_profile):
                         final_answer = result["answer"]
 
                     else:
+                        # ✅ Pass raw Image object — gemma_client handles all conversion
                         response = gemma_client.generate_with_image(
-                            image_path=pil_image,   # ✅ PIL image directly
+                            image_path_or_pil=display_image,
                             prompt=prompt,
                             system_prompt="You are Ira, a compassionate postpartum health AI assistant.",
                             max_new_tokens=512,
@@ -160,7 +153,7 @@ def render_image_check_page(gemma_client, user_profile):
 
                         st.markdown("### 📋 Assessment")
                         st.write(response)
-                        final_answer = response             # ✅ always defined
+                        final_answer = response
 
                     # Warning footer
                     st.warning(
