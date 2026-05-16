@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path("/kaggle/working")
+ROOT = Path("/kaggle/working/Ira-Postpartum-Care-Companion")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
