@@ -153,7 +153,7 @@ class GemmaClient:
                 image_content = {"type": "image", "url": image_path}
             else:
                 # For local files, we need to load and the processor handles it
-                image_content = {"type": "image"}
+                image_content = {"type": "image", "image": pil_image}
                 image = Image.open(image_path).convert("RGB")
         except Exception as e:
             return f"Image load failed: {e}"
@@ -184,6 +184,7 @@ class GemmaClient:
             return_dict=True,
             return_tensors="pt",
             add_generation_prompt=True,
+            images=[pil_image] if pil_image is not None else None,
         ).to(model.device)
 
         input_len = inputs["input_ids"].shape[-1]
