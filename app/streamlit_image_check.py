@@ -40,14 +40,24 @@ def render_image_check_page(gemma_client, user_profile):
     )
 
     if uploaded_file:
-        # Validate size
+    # Validate size
         if uploaded_file.size > 10 * 1024 * 1024:
             st.error("❌ File too large. Maximum size: 10MB")
             return
-
-        # ✅ Convert to RGB immediately on load — pil_image always defined here
-        pil_image = Image.open(uploaded_file).convert('RGB')
-
+    
+        # ✅ Use getvalue() — reusable buffer, doesn't exhaust after st.image()
+        image_bytes = uploaded_file.getvalue()
+        raw = Image.open(BytesIO(image_bytes))
+    
+        # ✅ Handle all image modes properly
+        if raw.mode == "RGBA":
+            background = Image.new("RGB", raw.size, (255, 255, 255))
+            background.paste(raw, mask=raw.split()[3])
+            pil_image = background
+        elif raw.mode == "P":
+            pil_image = raw.convert("RGBA").convert("RGB")
+        else:
+            pil_image = raw.convert("RGB")
         col1, col2 = st.columns([1, 1])
 
         with col1:
