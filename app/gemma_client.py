@@ -48,31 +48,37 @@ class GemmaClient:
         return processor, model
 
     def _load_image(self, image_input) -> Image.Image:
-        """
-        Load a PIL Image from any supported input type:
-        - PIL Image object (returned as-is after RGB conversion)
-        - Streamlit UploadedFile or any file-like object with .read()
-        - Local file path string
-        - HTTP/HTTPS URL string
-        """
-        # ✅ Check PIL Image FIRST — before any hasattr checks
+        # ✅ PIL Image — convert to RGB here
         if isinstance(image_input, Image.Image):
-            return image_input.convert("RGB")
-
-        # Local path or URL string
-        if isinstance(image_input, str):
+            raw = image_input
+        elif isinstance(image_input, str):
             if image_input.startswith("http://") or image_input.startswith("https://"):
                 import requests
                 r = requests.get(image_input, timeout=10)
-                return Image.open(BytesIO(r.content)).convert("RGB")
+                raw = Image.open(BytesIO(r.content))
             else:
-                return Image.open(image_input).convert("RGB")
-
-        # File-like object (Streamlit UploadedFile, BytesIO, etc.)
-        if hasattr(image_input, "read"):
-            return Image.open(BytesIO(image_input.read())).convert("RGB")
-
-        raise ValueError(f"Unsupported image input type: {type(image_input)}")
+                raw = Image.open(image_input)
+        elif hasattr(image_input, "read"):
+            raw = Image.open(BytesIO(image_input.read()))
+        else:
+            raise ValueError(f"Unsupported image input type: {type(image_input)}")
+    
+        # ✅ All conversion and validation happens here
+        if raw.mode == "RGBA":
+            background = Image.new("RGB", raw.size, (255, 255, 255))
+            background.paste(raw, mask=raw.split()[3])
+            image = background
+        elif raw.mode == "P":
+            image = raw.convert("RGBA").convert("RGB")
+        else:
+            image = raw.convert("RGB")
+    
+        # ✅ Validate via numpy
+        import numpy as np
+        arr = np.array(image)
+        print(f"[_load_image] mode={image.mode}, size={image.size}, mean={arr.mean():.1f}, unique={len(np.unique(arr.reshape(-1,3), axis=0))}")
+    
+        return image
 
     def _parse_response(self, response: str, processor) -> Dict[str, str]:
         """Parse response using processor.parse_response() for thinking mode."""
