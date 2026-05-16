@@ -1,8 +1,10 @@
 """Visual Health Check page - Image analysis with Gemma 4."""
 
 import streamlit as st
+from streamlit_mic_recorder import mic_recorder
 from pathlib import Path
 from PIL import Image
+import tempfile
 
 
 def render_image_check_page(gemma_client, user_profile):
@@ -56,6 +58,44 @@ def render_image_check_page(gemma_client, user_profile):
                 placeholder="e.g., Started 3 days ago, itchy, painful...",
                 height=100
             )
+
+            # Audio description
+            st.markdown("**🎤 Or describe with voice**")
+            audio_bytes_visual = mic_recorder(
+                start_prompt="🎙️ Describe",
+                stop_prompt="⏹️ Stop",
+                just_once=False,
+                use_container_width=True,
+                key="visual_audio"
+            )
+
+            if audio_bytes_visual:
+                temp_dir = Path(tempfile.gettempdir()) / "ira_audio"
+                temp_dir.mkdir(exist_ok=True)
+                audio_path_visual = temp_dir / f"visual_{user_profile['name']}.wav"
+
+                with open(audio_path_visual, "wb") as f:
+                    f.write(audio_bytes_visual['bytes'])
+
+                st.audio(audio_bytes_visual['bytes'], format='audio/wav')
+
+                with st.spinner("🎧 Transcribing description..."):
+                    # Transcribe audio
+                    system_prompt = "You are a medical transcription assistant. Transcribe this audio description of a health concern accurately."
+                    prompt = "Transcribe this audio. Provide only the transcription."
+                    transcription_visual = gemma_client.generate_with_audio(
+                        audio_path=str(audio_path_visual),
+                        prompt=prompt,
+                        system_prompt=system_prompt,
+                        max_new_tokens=512
+                    )
+
+                if transcription_visual and not transcription_visual.startswith("[Audio"):
+                    st.success("✅ Voice description added!")
+                    if additional_info:
+                        additional_info = f"{additional_info}\n\n[Voice]: {transcription_visual}"
+                    else:
+                        additional_info = transcription_visual
 
             # Analysis settings
             show_thinking = st.checkbox("Show AI reasoning", value=False)
