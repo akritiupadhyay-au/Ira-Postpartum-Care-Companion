@@ -10,6 +10,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import streamlit as st
+from streamlit_mic_recorder import mic_recorder
+import tempfile
+from pathlib import Path
 
 # Configure Streamlit for Kaggle offline mode
 st.set_page_config(
@@ -27,6 +30,28 @@ PHASE_KEY_MAP = {
     "Early (8–42 days)":     "early_postpartum",
     "Late (43+ days)":       "late_postpartum",
 }
+
+
+# ── Audio Helper Functions ────────────────────────────────────────────────────
+
+def transcribe_audio_with_gemma(gemma_client, audio_path: str, language: str = "English") -> str:
+    """Transcribe audio using Gemma's audio capability."""
+    try:
+        system_prompt = f"""You are a medical transcription assistant.
+Transcribe the audio accurately. The speaker is a postpartum mother describing symptoms, feelings, or questions.
+Transcribe in {language}. If the audio is unclear, do your best to capture the meaning."""
+
+        prompt = "Transcribe this audio message from a new mother. Provide only the transcription, no additional commentary."
+
+        transcription = gemma_client.generate_with_audio(
+            audio_path=audio_path,
+            prompt=prompt,
+            system_prompt=system_prompt,
+            max_new_tokens=512
+        )
+        return transcription.strip()
+    except Exception as e:
+        return f"[Audio transcription error: {str(e)}]"
 
 
 # ── Init (cached) ─────────────────────────────────────────────────────────────
@@ -302,6 +327,40 @@ elif page == "Wellness Check":
     days = st.number_input(t("days_postpartum", lang), min_value=0, max_value=365, value=profile['postpartum_days'])
     symptoms = st.text_area(t("symptoms", lang), placeholder=t("placeholder_symptoms", lang))
 
+    # Audio input option
+    st.markdown("---")
+    st.markdown("**🎤 Or record your symptoms with voice**")
+    audio_bytes = mic_recorder(
+        start_prompt="🎙️ Start Recording",
+        stop_prompt="⏹️ Stop Recording",
+        just_once=False,
+        use_container_width=False,
+        key="wellness_audio"
+    )
+
+    if audio_bytes:
+        # Save audio and transcribe
+        temp_dir = Path(tempfile.gettempdir()) / "ira_audio"
+        temp_dir.mkdir(exist_ok=True)
+        audio_path = temp_dir / f"wellness_{profile['name']}.wav"
+
+        with open(audio_path, "wb") as f:
+            f.write(audio_bytes['bytes'])
+
+        st.audio(audio_bytes['bytes'], format='audio/wav')
+
+        with st.spinner("🎧 Transcribing your voice message..."):
+            transcription = transcribe_audio_with_gemma(gemma_client, str(audio_path), lang)
+
+        if transcription and not transcription.startswith("[Audio transcription error"):
+            st.success("✅ Audio transcribed!")
+            st.info(f"**Transcription:** {transcription}")
+            # Append to symptoms
+            if symptoms:
+                symptoms = f"{symptoms}\n\n[Voice message]: {transcription}"
+            else:
+                symptoms = transcription
+
     # Thinking mode toggle
     col1, col2 = st.columns([3, 1])
     with col2:
@@ -387,6 +446,37 @@ elif page == "Nutrition":
     symptoms_text = st.text_input(t("symptoms_optional", lang), placeholder="e.g., constipation, low energy...")
     days_pp = st.number_input(t("days_postpartum", lang), min_value=0, max_value=365, value=profile['postpartum_days'], key="nutrition_days")
 
+    # Audio input for nutrition
+    st.markdown("**🎤 Or describe dietary needs/symptoms with voice**")
+    audio_bytes_nutrition = mic_recorder(
+        start_prompt="🎙️ Record",
+        stop_prompt="⏹️ Stop",
+        just_once=False,
+        use_container_width=False,
+        key="nutrition_audio"
+    )
+
+    if audio_bytes_nutrition:
+        temp_dir = Path(tempfile.gettempdir()) / "ira_audio"
+        temp_dir.mkdir(exist_ok=True)
+        audio_path_nutrition = temp_dir / f"nutrition_{profile['name']}.wav"
+
+        with open(audio_path_nutrition, "wb") as f:
+            f.write(audio_bytes_nutrition['bytes'])
+
+        st.audio(audio_bytes_nutrition['bytes'], format='audio/wav')
+
+        with st.spinner("🎧 Transcribing..."):
+            transcription_nutrition = transcribe_audio_with_gemma(gemma_client, str(audio_path_nutrition), lang)
+
+        if transcription_nutrition and not transcription_nutrition.startswith("[Audio transcription error"):
+            st.success("✅ Voice message transcribed!")
+            st.info(f"**You said:** {transcription_nutrition}")
+            if symptoms_text:
+                symptoms_text = f"{symptoms_text}, {transcription_nutrition}"
+            else:
+                symptoms_text = transcription_nutrition
+
     if st.button(t("get_diet_plan", lang)):
         # Parse symptoms
         symptom_list = [s.strip() for s in symptoms_text.split(",") if s.strip()]
@@ -440,6 +530,38 @@ elif page == "My Journal":
         text = st.text_area(t("placeholder_journal", lang), height=150, key="journal_text_input")
     with col2:
         analyze_entry = st.checkbox(t("get_ai_analysis", lang), value=True)
+
+    # Audio journal entry
+    st.markdown("---")
+    st.markdown("**🎤 Or record a voice journal entry**")
+    audio_bytes_journal = mic_recorder(
+        start_prompt="🎙️ Start Recording",
+        stop_prompt="⏹️ Stop Recording",
+        just_once=False,
+        use_container_width=False,
+        key="journal_audio"
+    )
+
+    if audio_bytes_journal:
+        temp_dir = Path(tempfile.gettempdir()) / "ira_audio"
+        temp_dir.mkdir(exist_ok=True)
+        audio_path_journal = temp_dir / f"journal_{profile['name']}.wav"
+
+        with open(audio_path_journal, "wb") as f:
+            f.write(audio_bytes_journal['bytes'])
+
+        st.audio(audio_bytes_journal['bytes'], format='audio/wav')
+
+        with st.spinner("🎧 Transcribing your journal entry..."):
+            transcription_journal = transcribe_audio_with_gemma(gemma_client, str(audio_path_journal), lang)
+
+        if transcription_journal and not transcription_journal.startswith("[Audio transcription error"):
+            st.success("✅ Voice journal transcribed!")
+            st.info(f"**Your journal:** {transcription_journal}")
+            if text:
+                text = f"{text}\n\n[Voice entry]: {transcription_journal}"
+            else:
+                text = transcription_journal
 
     if st.button(t("save_entry", lang), type="primary"):
         if not text.strip():
@@ -535,6 +657,37 @@ elif page == "Mom's Circle":
     with st.expander(t("share_tip", lang), expanded=True):
         author  = st.text_input(f"{t('your_name', lang)} (optional)", placeholder=t("placeholder_name", lang))
         tip_text = st.text_area(t("your_tip", lang), placeholder="e.g. Drinking ajwain water really helped with my digestion...")
+
+        # Audio tip
+        st.markdown("**🎤 Or record your tip with voice**")
+        audio_bytes_tip = mic_recorder(
+            start_prompt="🎙️ Record Tip",
+            stop_prompt="⏹️ Stop",
+            just_once=False,
+            use_container_width=False,
+            key="community_tip_audio"
+        )
+
+        if audio_bytes_tip:
+            temp_dir = Path(tempfile.gettempdir()) / "ira_audio"
+            temp_dir.mkdir(exist_ok=True)
+            audio_path_tip = temp_dir / f"tip_{author or 'anonymous'}.wav"
+
+            with open(audio_path_tip, "wb") as f:
+                f.write(audio_bytes_tip['bytes'])
+
+            st.audio(audio_bytes_tip['bytes'], format='audio/wav')
+
+            with st.spinner("🎧 Transcribing your tip..."):
+                transcription_tip = transcribe_audio_with_gemma(gemma_client, str(audio_path_tip), lang)
+
+            if transcription_tip and not transcription_tip.startswith("[Audio transcription error"):
+                st.success("✅ Voice tip transcribed!")
+                st.info(f"**Your tip:** {transcription_tip}")
+                if tip_text:
+                    tip_text = f"{tip_text}\n\n[Voice tip]: {transcription_tip}"
+                else:
+                    tip_text = transcription_tip
 
         if st.button(t("post_tip", lang), type="primary"):
             if not tip_text.strip():
@@ -894,8 +1047,37 @@ elif page == "Share with Ira":
         with st.chat_message("assistant", avatar="🌸"):
             st.write(turn["ira"])
 
-    # input
-    user_input = st.chat_input(t("type_message", lang))
+    # Audio input for chat
+    st.markdown("**🎤 Record a voice message to Ira**")
+    audio_bytes_chat = mic_recorder(
+        start_prompt="🎙️ Talk to Ira",
+        stop_prompt="⏹️ Stop",
+        just_once=False,
+        use_container_width=False,
+        key="chat_audio"
+    )
+
+    user_input = None
+
+    if audio_bytes_chat:
+        temp_dir = Path(tempfile.gettempdir()) / "ira_audio"
+        temp_dir.mkdir(exist_ok=True)
+        audio_path_chat = temp_dir / f"chat_{profile['name']}.wav"
+
+        with open(audio_path_chat, "wb") as f:
+            f.write(audio_bytes_chat['bytes'])
+
+        st.audio(audio_bytes_chat['bytes'], format='audio/wav')
+
+        with st.spinner("🎧 Listening to your message..."):
+            user_input = transcribe_audio_with_gemma(gemma_client, str(audio_path_chat), lang)
+
+        if user_input and not user_input.startswith("[Audio transcription error"):
+            st.success(f"✅ **You said:** {user_input}")
+
+    # Text input
+    if not user_input:
+        user_input = st.chat_input(t("type_message", lang))
 
     if user_input:
         with st.chat_message("user"):
