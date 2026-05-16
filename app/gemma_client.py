@@ -139,7 +139,7 @@ class GemmaClient:
         """Generate response with image input (Official Gemma 4 format).
 
         Args:
-            image_path: Path to image file or URL
+            image_path: Path to local image file
             prompt: Text prompt for analysis
             system_prompt: System instructions
             max_new_tokens: Max tokens to generate
@@ -148,13 +148,8 @@ class GemmaClient:
         processor, model = self._load()
 
         try:
-            # Support both local files and URLs
-            if image_path.startswith("http://") or image_path.startswith("https://"):
-                image_content = {"type": "image", "url": image_path}
-            else:
-                # For local files, we need to load and the processor handles it
-                image_content = {"type": "image", "image": pil_image}
-                image = Image.open(image_path).convert("RGB")
+            # Load local image file
+            image = Image.open(image_path).convert("RGB")
         except Exception as e:
             return f"Image load failed: {e}"
 
@@ -168,23 +163,20 @@ class GemmaClient:
             else:
                 messages.append({"role": "system", "content": system_prompt})
 
-        # Add user message with image before text (official format)
+        # Add user message with image and text
         messages.append({
             "role": "user",
             "content": [
-                image_content,
+                {"type": "image"},
                 {"type": "text", "text": prompt}
             ]
         })
 
-        # Process input using official method
-        inputs = processor.apply_chat_template(
-            messages,
-            tokenize=True,
-            return_dict=True,
-            return_tensors="pt",
-            add_generation_prompt=True,
-            images=[pil_image] if pil_image is not None else None,
+        # Process input with image - processor handles PIL image automatically
+        inputs = processor(
+            text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
+            images=image,
+            return_tensors="pt"
         ).to(model.device)
 
         input_len = inputs["input_ids"].shape[-1]
@@ -215,12 +207,8 @@ class GemmaClient:
         processor, model = self._load()
 
         try:
-            # Support both local files and URLs
-            if image_path.startswith("http://") or image_path.startswith("https://"):
-                image_content = {"type": "image", "url": image_path}
-            else:
-                image_content = {"type": "image"}
-                image = Image.open(image_path).convert("RGB")
+            # Load local image file
+            image = Image.open(image_path).convert("RGB")
         except Exception as e:
             return {"thinking": "", "answer": f"Image load failed: {e}"}
 
@@ -235,18 +223,16 @@ class GemmaClient:
         messages.append({
             "role": "user",
             "content": [
-                image_content,
+                {"type": "image"},
                 {"type": "text", "text": prompt}
             ]
         })
 
-        # Process input using official method
-        inputs = processor.apply_chat_template(
-            messages,
-            tokenize=True,
-            return_dict=True,
-            return_tensors="pt",
-            add_generation_prompt=True,
+        # Process input with image
+        inputs = processor(
+            text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
+            images=image,
+            return_tensors="pt"
         ).to(model.device)
 
         input_len = inputs["input_ids"].shape[-1]
@@ -292,7 +278,7 @@ class GemmaClient:
         """Generate response with video input (Official Gemma 4 format).
 
         Args:
-            video_path: Path to video file or URL
+            video_path: Path to local video file
             prompt: Text prompt for analysis
             system_prompt: System instructions
             max_new_tokens: Max tokens to generate
@@ -313,28 +299,20 @@ class GemmaClient:
                 else:
                     messages.append({"role": "system", "content": system_prompt})
 
-            # Support both local files and URLs
-            if video_path.startswith("http://") or video_path.startswith("https://"):
-                video_content = {"type": "video", "video": video_path}
-            else:
-                video_content = {"type": "video", "video": video_path}
-
-            # Add video before text (official format)
+            # Add video content - processor handles local file path
             messages.append({
                 "role": "user",
                 "content": [
-                    video_content,
+                    {"type": "video", "video": video_path},
                     {"type": "text", "text": prompt}
                 ]
             })
 
-            # Process input using official method
-            inputs = processor.apply_chat_template(
-                messages,
-                tokenize=True,
-                return_dict=True,
-                return_tensors="pt",
-                add_generation_prompt=True,
+            # Process input - processor extracts frames from video file
+            inputs = processor(
+                text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
+                videos=video_path,
+                return_tensors="pt"
             ).to(model.device)
 
             input_len = inputs["input_ids"].shape[-1]
@@ -389,28 +367,20 @@ class GemmaClient:
                 else:
                     messages.append({"role": "system", "content": system_prompt})
 
-            # Support both local files and URLs
-            if audio_path.startswith("http://") or audio_path.startswith("https://"):
-                audio_content = {"type": "audio", "audio": audio_path}
-            else:
-                audio_content = {"type": "audio", "audio": audio_path}
-
-            # Add audio before text (official format)
+            # Add audio content - processor handles local file path
             messages.append({
                 "role": "user",
                 "content": [
-                    audio_content,
+                    {"type": "audio", "audio": audio_path},
                     {"type": "text", "text": prompt}
                 ]
             })
 
-            # Process input using official method
-            inputs = processor.apply_chat_template(
-                messages,
-                tokenize=True,
-                return_dict=True,
-                return_tensors="pt",
-                add_generation_prompt=True,
+            # Process input - processor reads audio from file
+            inputs = processor(
+                text=processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
+                audios=audio_path,
+                return_tensors="pt"
             ).to(model.device)
 
             input_len = inputs["input_ids"].shape[-1]
