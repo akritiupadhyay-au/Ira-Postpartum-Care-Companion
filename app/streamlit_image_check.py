@@ -102,9 +102,11 @@ def render_image_check_page(gemma_client, user_profile):
 
         # Analyze button
         if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
-            # Save temp file
+            # Save temp file - convert to RGB first to ensure compatibility
             temp_path = Path("/tmp/uploaded_image.jpg")
-            image.save(temp_path)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            image.save(temp_path, quality=95)
 
             # Build prompt based on check type
             prompts = {
