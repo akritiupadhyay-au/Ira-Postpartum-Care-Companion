@@ -4,7 +4,8 @@ import os
 import json
 import re
 import torch
-from typing import Optional, Dict, List, Any
+from io import BytesIO
+from typing import Optional, Dict, List, Any, Union
 from PIL import Image
 from transformers import (
     AutoProcessor,
@@ -46,13 +47,39 @@ class GemmaClient:
 
         return processor, model
 
+    def _load_image(self, image_input) -> Image.Image:
+        """
+        Load a PIL Image from any supported input type:
+        - PIL Image object (returned as-is after RGB conversion)
+        - Streamlit UploadedFile or any file-like object with .read()
+        - Local file path string
+        - HTTP/HTTPS URL string
+        """
+        # ✅ Check PIL Image FIRST — before any hasattr checks
+        if isinstance(image_input, Image.Image):
+            return image_input.convert("RGB")
+
+        # Local path or URL string
+        if isinstance(image_input, str):
+            if image_input.startswith("http://") or image_input.startswith("https://"):
+                import requests
+                r = requests.get(image_input, timeout=10)
+                return Image.open(BytesIO(r.content)).convert("RGB")
+            else:
+                return Image.open(image_input).convert("RGB")
+
+        # File-like object (Streamlit UploadedFile, BytesIO, etc.)
+        if hasattr(image_input, "read"):
+            return Image.open(BytesIO(image_input.read())).convert("RGB")
+
+        raise ValueError(f"Unsupported image input type: {type(image_input)}")
+
     def _parse_response(self, response: str, processor) -> Dict[str, str]:
         """Parse response using processor.parse_response() for thinking mode."""
         try:
             parsed = processor.parse_response(response)
             return parsed
         except:
-            # Fallback if parse fails
             return {"answer": response, "thinking": ""}
 
     def generate(self, system_prompt: str, user_prompt: str, max_new_tokens: int = 256,
@@ -62,7 +89,6 @@ class GemmaClient:
 
         messages = []
 
-        # To enable thinking, add <|think|> token at start of system prompt
         if enable_thinking and system_prompt:
             system_prompt = f"<|think|>{system_prompt}"
         elif enable_thinking:
@@ -75,7 +101,6 @@ class GemmaClient:
         if not messages:
             messages = [{"role": "user", "content": "Hello"}]
 
-        # Add JSON instruction if enabled
         if force_json:
             messages[-1]["content"] += "\n\nRespond with valid JSON only."
 
@@ -90,7 +115,6 @@ class GemmaClient:
             return_tensors="pt"
         ).to(model.device)
 
-        # Increase tokens for thinking mode
         if enable_thinking:
             max_new_tokens = min(max_new_tokens * 3, 4000)
 
@@ -110,7 +134,6 @@ class GemmaClient:
         """Generate with thinking mode, return both reasoning and answer."""
         response = self.generate(system_prompt, user_prompt, max_new_tokens, enable_thinking=True)
 
-        # Parse Gemma 4 thinking format: <|channel>thought\n[reasoning]<channel|>[answer]
         think_pattern = r'<\|channel>thought\n(.*?)<channel\|>(.*)'
         match = re.search(think_pattern, response, re.DOTALL)
 
@@ -126,7 +149,6 @@ class GemmaClient:
         response = self.generate(system_prompt, user_prompt, max_new_tokens=512, force_json=True)
 
         try:
-            # Extract JSON from response
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group(0))
@@ -134,62 +156,67 @@ class GemmaClient:
         except:
             return {"error": "Failed to parse JSON", "raw": response}
 
-    def generate_with_image(self, image_path: str, prompt: str, system_prompt: str = "",
-                           max_new_tokens: int = 512, enable_thinking: bool = False) -> str:
-        """Generate response with image input (Official Gemma 4 format).
+    def generate_with_image(self,
+                            image_path: Union[str, Image.Image],
+                            prompt: str,
+                            system_prompt: str = "",
+                            max_new_tokens: int = 512,
+                            enable_thinking: bool = False) -> str:
+        """Generate response with image input.
 
         Args:
-            image_path: Path to local image file
+            image_path: PIL Image, local file path, URL, or Streamlit UploadedFile
             prompt: Text prompt for analysis
             system_prompt: System instructions
             max_new_tokens: Max tokens to generate
-            enable_thinking: Enable thinking mode with <|think|> token
+            enable_thinking: Enable thinking mode
         """
         processor, model = self._load()
 
         try:
-            # Load local image file
-            image = Image.open(image_path).convert("RGB")
+            image = self._load_image(image_path)
         except Exception as e:
             return f"Image load failed: {e}"
 
-        # Build messages in official Gemma 4 format
         messages = []
 
-        # Add system prompt with thinking token if enabled
         if system_prompt:
-            if enable_thinking:
-                messages.append({"role": "system", "content": f"<|think|>{system_prompt}"})
-            else:
-                messages.append({"role": "system", "content": system_prompt})
+            content = f"<|think|>{system_prompt}" if enable_thinking else system_prompt
+            messages.append({"role": "system", "content": content})
 
-        # Add user message with image and text
         messages.append({
             "role": "user",
             "content": [
-                {"type": "image"},
+                {"type": "image", "image": image},
                 {"type": "text", "text": prompt}
             ]
         })
 
-        # Apply chat template first
-        text_prompt = processor.tokenizer.apply_chat_template(
+        # Use processor.apply_chat_template (image-aware, not tokenizer)
+        inputs = processor.apply_chat_template(
             messages,
-            tokenize=False,
-            add_generation_prompt=True
-        )
-
-        # Process input with image - pass PIL image to processor
-        inputs = processor(
-            text=text_prompt,
-            images=[image],  # Processor expects list of images
+            tokenize=True,
+            return_dict=True,
             return_tensors="pt",
-            padding=True
+            add_generation_prompt=True,
         ).to(model.device)
+
+        # Fallback if pixel_values missing
+        if "pixel_values" not in inputs:
+            text_prompt = processor.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+            inputs = processor(
+                text=text_prompt,
+                images=image,
+                return_tensors="pt"
+            ).to(model.device)
+
+        if "pixel_values" not in inputs:
+            return "Error: image could not be embedded — pixel_values missing."
 
         input_len = inputs["input_ids"].shape[-1]
 
-        # Generate output
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
@@ -198,62 +225,65 @@ class GemmaClient:
                 do_sample=True
             )
 
-        # Decode with skip_special_tokens=False to keep thinking tokens
-        response = processor.decode(outputs[0][input_len:], skip_special_tokens=False)
-
-        # Parse response (extracts thinking if enabled)
         if enable_thinking:
+            response = processor.decode(outputs[0][input_len:], skip_special_tokens=False)
             parsed = self._parse_response(response, processor)
             return parsed.get("answer", response)
         else:
-            # Clean response for non-thinking mode
             return processor.decode(outputs[0][input_len:], skip_special_tokens=True)
 
-    def generate_with_image_thinking(self, image_path: str, prompt: str, system_prompt: str = "",
+    def generate_with_image_thinking(self,
+                                     image_path: Union[str, Image.Image],
+                                     prompt: str,
+                                     system_prompt: str = "",
                                      max_new_tokens: int = 1024) -> Dict[str, str]:
-        """Generate response with image AND thinking mode enabled (Official format)."""
+        """Generate response with image AND thinking mode enabled."""
         processor, model = self._load()
 
         try:
-            # Load local image file
-            image = Image.open(image_path).convert("RGB")
+            image = self._load_image(image_path)
         except Exception as e:
             return {"thinking": "", "answer": f"Image load failed: {e}"}
 
-        # Enable thinking by adding <|think|> token to system prompt
         if system_prompt:
             system_prompt = f"<|think|>{system_prompt}"
         else:
             system_prompt = "<|think|>You are a helpful assistant analyzing images."
 
-        messages = []
-        messages.append({"role": "system", "content": system_prompt})
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "image"},
-                {"type": "text", "text": prompt}
-            ]
-        })
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": image},
+                    {"type": "text", "text": prompt}
+                ]
+            }
+        ]
 
-        # Apply chat template first
-        text_prompt = processor.tokenizer.apply_chat_template(
+        inputs = processor.apply_chat_template(
             messages,
-            tokenize=False,
-            add_generation_prompt=True
-        )
-
-        # Process input with image - pass PIL image to processor
-        inputs = processor(
-            text=text_prompt,
-            images=[image],  # Processor expects list of images
+            tokenize=True,
+            return_dict=True,
             return_tensors="pt",
-            padding=True
+            add_generation_prompt=True,
         ).to(model.device)
+
+        if "pixel_values" not in inputs:
+            text_prompt = processor.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+            inputs = processor(
+                text=text_prompt,
+                images=image,
+                return_tensors="pt"
+            ).to(model.device)
+
+        if "pixel_values" not in inputs:
+            return {"thinking": "", "answer": "Error: image could not be embedded."}
 
         input_len = inputs["input_ids"].shape[-1]
 
-        # Generate output
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
@@ -262,10 +292,7 @@ class GemmaClient:
                 do_sample=True
             )
 
-        # Decode with skip_special_tokens=False to preserve thinking tokens
         response = processor.decode(outputs[0][input_len:], skip_special_tokens=False)
-
-        # Parse response using processor's parse_response method
         parsed = self._parse_response(response, processor)
 
         return {
@@ -284,38 +311,21 @@ class GemmaClient:
 
     def generate_long_context(self, context: str, question: str, max_new_tokens: int = 512) -> str:
         """Handle long context (up to 128K tokens)."""
-        # Context can be entire health history
         full_prompt = f"Context (analyze all of this):\n\n{context}\n\n---\n\nQuestion: {question}"
-
         return self.generate("", full_prompt, max_new_tokens=max_new_tokens)
 
     def generate_with_video(self, video_path: str, prompt: str, system_prompt: str = "",
-                           max_new_tokens: int = 512, enable_thinking: bool = False) -> str:
-        """Generate response with video input (Official Gemma 4 format).
-
-        Args:
-            video_path: Path to local video file
-            prompt: Text prompt for analysis
-            system_prompt: System instructions
-            max_new_tokens: Max tokens to generate
-            enable_thinking: Enable thinking mode
-
-        Note: Videos up to 60 seconds supported at ~1 fps (60 frames max)
-        """
+                            max_new_tokens: int = 512, enable_thinking: bool = False) -> str:
+        """Generate response with video input (Official Gemma 4 format)."""
         processor, model = self._load()
 
         try:
-            # Build messages in official Gemma 4 format
             messages = []
 
-            # Add system prompt with thinking token if enabled
             if system_prompt:
-                if enable_thinking:
-                    messages.append({"role": "system", "content": f"<|think|>{system_prompt}"})
-                else:
-                    messages.append({"role": "system", "content": system_prompt})
+                content = f"<|think|>{system_prompt}" if enable_thinking else system_prompt
+                messages.append({"role": "system", "content": content})
 
-            # Add video content - processor handles local file path
             messages.append({
                 "role": "user",
                 "content": [
@@ -324,24 +334,21 @@ class GemmaClient:
                 ]
             })
 
-            # Apply chat template first
             text_prompt = processor.tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
                 add_generation_prompt=True
             )
 
-            # Process input - processor extracts frames from video file
             inputs = processor(
                 text=text_prompt,
-                videos=[video_path],  # Processor expects list of video paths
+                videos=[video_path],
                 return_tensors="pt",
                 padding=True
             ).to(model.device)
 
             input_len = inputs["input_ids"].shape[-1]
 
-            # Generate output
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
@@ -350,7 +357,6 @@ class GemmaClient:
                     do_sample=True
                 )
 
-            # Decode response
             if enable_thinking:
                 response = processor.decode(outputs[0][input_len:], skip_special_tokens=False)
                 parsed = self._parse_response(response, processor)
@@ -362,36 +368,17 @@ class GemmaClient:
             return f"Video processing failed: {e}"
 
     def generate_with_audio(self, audio_path: str, prompt: str, system_prompt: str = "",
-                           max_new_tokens: int = 512, enable_thinking: bool = False) -> str:
-        """Generate response with audio input (Official Gemma 4 E4B format).
-
-        Args:
-            audio_path: Path to audio file or URL (.wav format)
-            prompt: Text prompt (e.g., transcription instructions)
-            system_prompt: System instructions
-            max_new_tokens: Max tokens to generate
-            enable_thinking: Enable thinking mode
-
-        Note: Audio up to 30 seconds supported
-
-        Example prompts:
-        - "Transcribe the following speech segment in Hindi into Hindi text."
-        - "Transcribe the following speech in English, then translate to Hindi."
-        """
+                            max_new_tokens: int = 512, enable_thinking: bool = False) -> str:
+        """Generate response with audio input (Official Gemma 4 E4B format)."""
         processor, model = self._load()
 
         try:
-            # Build messages in official Gemma 4 format
             messages = []
 
-            # Add system prompt with thinking token if enabled
             if system_prompt:
-                if enable_thinking:
-                    messages.append({"role": "system", "content": f"<|think|>{system_prompt}"})
-                else:
-                    messages.append({"role": "system", "content": system_prompt})
+                content = f"<|think|>{system_prompt}" if enable_thinking else system_prompt
+                messages.append({"role": "system", "content": content})
 
-            # Add audio content - processor handles local file path
             messages.append({
                 "role": "user",
                 "content": [
@@ -400,24 +387,21 @@ class GemmaClient:
                 ]
             })
 
-            # Apply chat template first
             text_prompt = processor.tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
                 add_generation_prompt=True
             )
 
-            # Process input - processor reads audio from file
             inputs = processor(
                 text=text_prompt,
-                audios=[audio_path],  # Processor expects list of audio paths
+                audios=[audio_path],
                 return_tensors="pt",
                 padding=True
             ).to(model.device)
 
             input_len = inputs["input_ids"].shape[-1]
 
-            # Generate output
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
@@ -426,7 +410,6 @@ class GemmaClient:
                     do_sample=True
                 )
 
-            # Decode response
             if enable_thinking:
                 response = processor.decode(outputs[0][input_len:], skip_special_tokens=False)
                 parsed = self._parse_response(response, processor)
